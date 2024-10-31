@@ -18,38 +18,47 @@ import math
 import numpy as np
 import nibabel as nib
 import tensorflow as tf
+import sys
 from ukbb_cardiac.common.image_utils import rescale_intensity
-
+from absl import flags
 
 """ Deployment parameters """
-FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_enum('seq_name', 'sa',
+FLAGS = flags.FLAGS
+flags.DEFINE_enum('seq_name', 'sa',
                          ['sa', 'la_2ch', 'la_4ch'],
                          'Sequence name.')
-tf.app.flags.DEFINE_string('data_dir', '/vol/bitbucket/wbai/own_work/ukbb_cardiac_demo',
+flags.DEFINE_string('data_dir', '/vol/bitbucket/wbai/own_work/ukbb_cardiac_demo',
                            'Path to the data set directory, under which images '
                            'are organised in subdirectories for each subject.')
-tf.app.flags.DEFINE_string('model_path',
+flags.DEFINE_string('model_path',
                            '',
                            'Path to the saved trained model.')
-tf.app.flags.DEFINE_boolean('process_seq', True,
+flags.DEFINE_boolean('process_seq', True,
                             'Process a time sequence of images.')
-tf.app.flags.DEFINE_boolean('save_seg', True,
+flags.DEFINE_boolean('save_seg', True,
                             'Save segmentation.')
-tf.app.flags.DEFINE_boolean('seg4', False,
+flags.DEFINE_boolean('seg4', False,
                             'Segment all the 4 chambers in long-axis 4 chamber view. '
                             'This seg4 network is trained using 200 subjects from Application 18545.'
                             'By default, for all the other tasks (ventricular segmentation'
                             'on short-axis images and atrial segmentation on long-axis images,'
                             'the networks are trained using 3,975 subjects from Application 2964.')
 
+FLAGS(sys.argv)
 
 if __name__ == '__main__':
-    with tf.Session() as sess:
+    gd = tf.MetaGraphDef()
+    with open('{0}.meta'.format(FLAGS.model_path), "rb") as f:
+        gd.ParseFromString(f.read())
+    for node in gd.graph_def.node:
+        if '_output_shapes' in node.attr:
+            del node.attr['_output_shapes']
+    
+    with tf.compat.v1.Session() as sess:
         sess.run(tf.global_variables_initializer())
 
         # Import the computation graph and restore the variable values
-        saver = tf.train.import_meta_graph('{0}.meta'.format(FLAGS.model_path))
+        saver = tf.train.import_meta_graph(gd)
         saver.restore(sess, '{0}'.format(FLAGS.model_path))
 
         print('Start deployment on the data set ...')

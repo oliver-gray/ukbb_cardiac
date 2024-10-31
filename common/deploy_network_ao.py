@@ -18,43 +18,52 @@ import math
 import numpy as np
 import nibabel as nib
 import tensorflow as tf
+import sys
 from ukbb_cardiac.common.image_utils import *
-
+from absl import flags
 
 """ Deployment parameters """
-FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_integer('time_step', 1,
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('time_step', 1,
                             'Time step during deployment of LSTM.')
-tf.app.flags.DEFINE_enum('seq_name', 'ao', ['ao'],
+flags.DEFINE_enum('seq_name', 'ao', ['ao'],
                          'Sequence name.')
-tf.app.flags.DEFINE_enum('model', 'UNet-LSTM', ['UNet', 'UNet-LSTM', 'Temporal-UNet'],
+flags.DEFINE_enum('model', 'UNet-LSTM', ['UNet', 'UNet-LSTM', 'Temporal-UNet'],
                          'Model name.')
-tf.app.flags.DEFINE_string('data_dir',
+flags.DEFINE_string('data_dir',
                            '/vol/medic02/users/wbai/data/cardiac_atlas/Biobank_ao/validation',
                            'Path to the test set directory, under which images '
                            'are organised in subdirectories for each subject.')
-tf.app.flags.DEFINE_string('model_path',
+flags.DEFINE_string('model_path',
                            '/vol/biomedic2/wbai/ukbb_cardiac/UKBB_18545/model/UNet-LSTM_ao_level5_filter16_22222_batch1_iter20000_lr0.001_zscore_tw9_h16_bidir_seq2seq_wR5_wr0.1_joint/UNet-LSTM_ao_level5_filter16_22222_batch1_iter20000_lr0.001_zscore_tw9_h16_bidir_seq2seq_wR5_wr0.1_joint.ckpt-20000',
                            'Path to the saved trained model.')
-tf.app.flags.DEFINE_boolean('process_seq', True,
+flags.DEFINE_boolean('process_seq', True,
                             'Process a time sequence of images.')
-tf.app.flags.DEFINE_boolean('save_seg', True,
+flags.DEFINE_boolean('save_seg', True,
                             'Save segmentation.')
-tf.app.flags.DEFINE_boolean('z_score', True,
+flags.DEFINE_boolean('z_score', True,
                             'Normalise the image intensity to z-score. '
                             'Otherwise, rescale the intensity.')
-tf.app.flags.DEFINE_integer('weight_R', 5,
+flags.DEFINE_integer('weight_R', 5,
                             'Radius of the weighting window.')
-tf.app.flags.DEFINE_float('weight_r', 0.1,
+flags.DEFINE_float('weight_r', 0.1,
                           'Power of weight for the seq2seq loss. 0: uniform; 1: linear; 2: square.')
 
+FLAGS(sys.argv)
 
 if __name__ == '__main__':
-    with tf.Session() as sess:
+    gd = tf.MetaGraphDef()
+    with open('{0}.meta'.format(FLAGS.model_path), "rb") as f:
+        gd.ParseFromString(f.read())
+    for node in gd.graph_def.node:
+        if '_output_shapes' in node.attr:
+            del node.attr['_output_shapes']
+    
+    with tf.compat.v1.Session() as sess:
         sess.run(tf.global_variables_initializer())
 
         # Import the computation graph and restore the variable values
-        saver = tf.train.import_meta_graph('{0}.meta'.format(FLAGS.model_path))
+        saver = tf.train.import_meta_graph(gd)
         saver.restore(sess, '{0}'.format(FLAGS.model_path))
 
         print('Start evaluating on the test set ...')
