@@ -17,7 +17,7 @@ import time
 import math
 import numpy as np
 import nibabel as nib
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import sys
 from ukbb_cardiac.common.image_utils import *
 from absl import flags
@@ -52,7 +52,7 @@ flags.DEFINE_float('weight_r', 0.1,
 FLAGS(sys.argv)
 
 if __name__ == '__main__':
-    gd = tf.MetaGraphDef()
+    gd = tf.compat.v1.MetaGraphDef()
     with open('{0}.meta'.format(FLAGS.model_path), "rb") as f:
         gd.ParseFromString(f.read())
     for node in gd.graph_def.node:
@@ -60,10 +60,10 @@ if __name__ == '__main__':
             del node.attr['_output_shapes']
     
     with tf.compat.v1.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         # Import the computation graph and restore the variable values
-        saver = tf.train.import_meta_graph(gd)
+        saver = tf.compat.v1.train.import_meta_graph(gd)
         saver.restore(sess, '{0}'.format(FLAGS.model_path))
 
         print('Start evaluating on the test set ...')
