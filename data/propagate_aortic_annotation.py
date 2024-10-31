@@ -26,9 +26,9 @@ def infer_time_frame(image_name, image_fr_name):
     """ Infer which time frame the annotation is at. """
     nim = nib.load(image_name)
     T = nim.header['dim'][4]
-    image = nim.get_data()
+    image = nim.get_fdata()
     nim_fr = nib.load(image_fr_name)
-    image_fr = nim_fr.get_data()
+    image_fr = nim_fr.get_fdata()
 
     diff = np.zeros(T)
     for t in range(T):

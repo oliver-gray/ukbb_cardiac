@@ -68,8 +68,8 @@ def get_random_batch(filename_list, batch_size, image_size=192, data_augmentatio
             print('  Select {0} {1}'.format(image_name, label_name))
 
             # Read image and label
-            image = nib.load(image_name).get_data()
-            label = nib.load(label_name).get_data()
+            image = nib.load(image_name).get_fdata()
+            label = nib.load(label_name).get_fdata()
 
             # Handle exceptions
             if image.shape != label.shape:
