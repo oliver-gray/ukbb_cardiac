@@ -19,22 +19,23 @@
 import os
 import glob
 import pandas as pd
-from biobank_utils import *
-import dateutil.parser
+import subprocess
+# from biobank_utils import *
+# import dateutil.parser
 
 
 if __name__ == '__main__':
     # Where the data will be downloaded
     data_root = '/opt/notebooks/ukb_image'
+    csv_file = "imaging_eids.csv"
     
-    subprocess.Popen(['bash', '-c', 'ukbb_cardiac/data/extract_bulk_data.sh; extract_eids imaging_eids.csv 20208 20209'])
-
-    # The spreadsheet which lists the anonymised IDs of the subjects.
-    # You can download a very large spreadsheet from the UK Biobank website, which exceeds 10GB.
-    # I normally first filter the spreadsheet, select only a subset of subjects with imaging data
-    # and save them in a smaller spreadsheet.
-    csv_file = '/vol/vipdata/data/biobank/cardiac/Application_18545/downloaded/ukb9137_image_subset.csv'
-    df = pd.read_csv(os.path.join(csv_dir, csv_file), header=1)
+    if not os.path.exists(data_root):
+        os.mkdir(data_root)
+    
+    command = ["/opt/notebooks/ukbb_cardiac/data/extract_bulk_data.sh", f"{data_root}/{csv_file}", "20208", "20209"]
+    output = subprocess.call(command)
+    
+    df = pd.read_csv(os.path.join(data_root, csv_file))
     data_list = df['eid']
 
     # Download cardiac MR images for each subject
